@@ -51,6 +51,8 @@ def list_players():
 
 
 def create_player(nickname, phone, rank="初段"):
+    if rank not in RANKS:
+        return None, "无效段位"
     conn = get_conn()
     c = conn.cursor()
     c.execute(
@@ -61,7 +63,7 @@ def create_player(nickname, phone, rank="初段"):
     player_id = c.lastrowid
     player = dict(conn.execute("SELECT * FROM players WHERE id=?", (player_id,)).fetchone())
     conn.close()
-    return player
+    return player, None
 
 
 def update_player(player_id, nickname=None, phone=None):
@@ -130,6 +132,7 @@ def create_game(black_id, red_id, game_date, result):
         return None, "棋手不存在"
     try:
         c = conn.cursor()
+        c.execute("BEGIN TRANSACTION")
         c.execute(
             "INSERT INTO games (black_id, red_id, game_date, result) VALUES (?, ?, ?, ?)",
             (black_id, red_id, game_date, result),

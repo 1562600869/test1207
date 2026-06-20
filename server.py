@@ -104,7 +104,13 @@ class Handler(BaseHTTPRequestHandler):
             if not nickname or not phone:
                 self._send_json({"error": "昵称和手机不能为空"}, 400)
                 return
-            player = db.create_player(nickname, phone, rank)
+            if rank not in db.RANKS:
+                self._send_json({"error": "无效段位"}, 400)
+                return
+            player, err = db.create_player(nickname, phone, rank)
+            if err:
+                self._send_json({"error": err}, 400)
+                return
             self._send_json(player, 201)
         elif path == "/api/games":
             black_id = body.get("black_id")
@@ -113,6 +119,9 @@ class Handler(BaseHTTPRequestHandler):
             result = body.get("result", "").strip()
             if not all([black_id, red_id, game_date, result]):
                 self._send_json({"error": "所有字段不能为空"}, 400)
+                return
+            if int(black_id) == int(red_id):
+                self._send_json({"error": "双方不能是同一人"}, 400)
                 return
             game, err = db.create_game(int(black_id), int(red_id), game_date, result)
             if err:
@@ -131,6 +140,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "无效ID"}, 400)
                 return
             new_rank = body.get("rank", "").strip()
+            if new_rank not in db.RANKS:
+                self._send_json({"error": "无效段位"}, 400)
+                return
             player, err = db.promote_player(pid, new_rank)
             if err:
                 self._send_json({"error": err}, 400)
