@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>象棋协会段位赛与积分管理系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff;padding:20px 0;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.header h1{font-size:26px;font-weight:700;letter-spacing:4px}
+.header p{font-size:13px;opacity:.7;margin-top:6px}
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+.tabs{display:flex;gap:0;background:#fff;border-radius:10px 10px 0 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.tab{flex:1;padding:14px 0;text-align:center;cursor:pointer;font-size:15px;font-weight:600;color:#666;border-bottom:3px solid transparent;transition:all .2s}
+.tab:hover{background:#f7f8fa;color:#333}
+.tab.active{color:#0f3460;border-bottom-color:#e94560;background:#f7f8fa}
+.panel{background:#fff;border-radius:0 0 10px 10px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.08);min-height:400px;display:none}
+.panel.active{display:block}
+.section-title{font-size:18px;font-weight:700;margin-bottom:18px;padding-left:12px;border-left:4px solid #e94560;color:#1a1a2e}
+form{margin-bottom:24px}
+.form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:13px;color:#666;font-weight:500}
+.form-group input,.form-group select{padding:8px 12px;border:1px solid #d9d9d9;border-radius:6px;font-size:14px;outline:none;transition:border .2s;min-width:140px}
+.form-group input:focus,.form-group select:focus{border-color:#0f3460;box-shadow:0 0 0 2px rgba(15,52,96,.1)}
+.btn{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.btn-primary{background:#e94560;color:#fff}
+.btn-primary:hover{background:#c73850}
+.btn-secondary{background:#0f3460;color:#fff}
+.btn-secondary:hover{background:#0a2647}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:4px}
+.btn-danger{background:#ff4d4f;color:#fff}
+.btn-danger:hover{background:#cf1322}
+.btn-warn{background:#fa8c16;color:#fff}
+.btn-warn:hover{background:#d46b08}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #f0f0f0;font-size:14px}
+th{background:#fafafa;font-weight:600;color:#555;font-size:13px}
+tr:hover{background:#f7f8fa}
+.rank-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600}
+.rank-1{background:#e6f7ff;color:#1890ff}
+.rank-2{background:#f6ffed;color:#52c41a}
+.rank-3{background:#fff7e6;color:#fa8c16}
+.rank-4{background:#fff1f0;color:#f5222d}
+.rank-5{background:#f9f0ff;color:#722ed1}
+.result-black{color:#333;font-weight:700}
+.result-red{color:#f5222d;font-weight:700}
+.result-draw{color:#fa8c16;font-weight:700}
+.empty-state{text-align:center;padding:40px;color:#999;font-size:15px}
+.toast{position:fixed;top:20px;right:20px;padding:12px 24px;border-radius:8px;color:#fff;font-size:14px;z-index:9999;animation:slideIn .3s ease}
+.toast-success{background:#52c41a}
+.toast-error{background:#ff4d4f}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:12px}
+.stat-card{background:linear-gradient(135deg,#f7f8fa,#fff);border:1px solid #e8e8e8;border-radius:10px;padding:20px;text-align:center}
+.stat-card .stat-rank{font-size:20px;font-weight:700;margin-bottom:6px}
+.stat-card .stat-count{font-size:32px;font-weight:800;color:#0f3460}
+.stat-card .stat-label{font-size:13px;color:#999;margin-top:4px}
+.promote-card{border:1px solid #e8e8e8;border-radius:10px;padding:20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;background:#fafafa}
+.promote-info{display:flex;align-items:center;gap:16px}
+.promote-info .name{font-size:16px;font-weight:700}
+.promote-info .current-rank{font-size:14px;color:#666}
+.promote-actions{display:flex;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>♚ 象棋协会段位赛与积分管理</h1>
+  <p>段位赛 · 对局记录 · 积分排行</p>
+</div>
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" data-tab="players">棋手管理</div>
+    <div class="tab" data-tab="games">对局记录</div>
+    <div class="tab" data-tab="promote">段位晋升</div>
+    <div class="tab" data-tab="leaderboard">积分排行</div>
+    <div class="tab" data-tab="stats">段位统计</div>
+  </div>
+
+  <div class="panel active" id="panel-players">
+    <div class="section-title">添加棋手</div>
+    <form id="form-player">
+      <div class="form-row">
+        <div class="form-group"><label>昵称</label><input type="text" id="p-nickname" required placeholder="棋手昵称"></div>
+        <div class="form-group"><label>手机</label><input type="tel" id="p-phone" required placeholder="手机号码"></div>
+        <div class="form-group"><label>段位</label>
+          <select id="p-rank"><option>初段</option><option>二段</option><option>三段</option><option>四段</option><option>五段</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary">添加棋手</button>
+      </div>
+    </form>
+    <div class="section-title">棋手列表</div>
+    <table id="table-players">
+      <thead><tr><th>ID</th><th>昵称</th><th>手机</th><th>段位</th><th>积分</th><th>胜场</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="panel-games">
+    <div class="section-title">记录对局</div>
+    <form id="form-game">
+      <div class="form-row">
+        <div class="form-group"><label>黑方棋手</label><select id="g-black"><option value="">选择黑方</option></select></div>
+        <div class="form-group"><label>红方棋手</label><select id="g-red"><option value="">选择红方</option></select></div>
+        <div class="form-group"><label>对局日期</label><input type="date" id="g-date" required></div>
+        <div class="form-group"><label>结果</label>
+          <select id="g-result"><option value="">选择结果</option><option value="黑胜">黑胜</option><option value="红胜">红胜</option><option value="和棋">和棋</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary">记录对局</button>
+      </div>
+    </form>
+    <div class="section-title">对局记录列表</div>
+    <table id="table-games">
+      <thead><tr><th>ID</th><th>黑方</th><th>红方</th><th>日期</th><th>结果</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="panel-promote">
+    <div class="section-title">段位晋升</div>
+    <div id="promote-list"></div>
+  </div>
+
+  <div class="panel" id="panel-leaderboard">
+    <div class="section-title">积分排行榜</div>
+    <table id="table-leaderboard">
+      <thead><tr><th>排名</th><th>昵称</th><th>段位</th><th>积分</th><th>胜场</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="panel-stats">
+    <div class="section-title">本月各段位对局次数统计</div>
+    <div id="stats-grid" class="stats-grid"></div>
+  </div>
+</div>
+
+<script>
+var RANKS=["初段","二段","三段","四段","五段"];
+var RANK_CLASS={"初段":"rank-1","二段":"rank-2","三段":"rank-3","四段":"rank-4","五段":"rank-5"};
+
+function toast(msg,isErr){
+  var d=document.createElement("div");
+  d.className="toast "+(isErr?"toast-error":"toast-success");
+  d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(function(){d.remove()},2500);
+}
+
+function api(method,path,body){
+  var opts={method:method,headers:{"Content-Type":"application/json"}};
+  if(body)opts.body=JSON.stringify(body);
+  return fetch("/api"+path,opts).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||"请求失败");return d})});
+}
+
+function rankBadge(rank){
+  return '<span class="rank-badge '+(RANK_CLASS[rank]||"")+'">'+rank+"</span>";
+}
+
+function resultClass(r){
+  if(r==="黑胜")return "result-black";
+  if(r==="红胜")return "result-red";
+  return "result-draw";
+}
+
+function emptyRow(colspan,text){
+  return '<tr><td colspan="'+colspan+'" class="empty-state">'+text+"</td></tr>";
+}
+
+function loadPlayers(){
+  api("GET","/players").then(function(list){
+    var tb=document.querySelector("#table-players tbody");
+    if(!list.length){tb.innerHTML=emptyRow(7,"暂无棋手，请先添加");return}
+    tb.innerHTML=list.map(function(p){
+      return "<tr><td>"+p.id+"</td><td>"+p.nickname+"</td><td>"+p.phone+"</td><td>"+rankBadge(p.rank)+"</td><td>"+p.score+"</td><td>"+p.wins+"</td>"+
+        '<td><button class="btn btn-danger btn-sm" onclick="delPlayer('+p.id+')">删除</button></td></tr>';
+    }).join("");
+    updatePlayerSelects(list);
+  }).catch(function(e){toast(e.message,true)});
+}
+
+function updatePlayerSelects(list){
+  var opts='<option value="">选择棋手</option>'+list.map(function(p){return'<option value="'+p.id+'">'+p.nickname+" ("+p.rank+")</option>"}).join("");
+  document.getElementById("g-black").innerHTML=opts;
+  document.getElementById("g-red").innerHTML=opts.replace("选择棋手","选择红方");
+}
+
+document.getElementById("form-player").addEventListener("submit",function(e){
+  e.preventDefault();
+  var nickname=document.getElementById("p-nickname").value.trim();
+  var phone=document.getElementById("p-phone").value.trim();
+  var rank=document.getElementById("p-rank").value;
+  if(!nickname||!phone){toast("昵称和手机不能为空",true);return}
+  api("POST","/players",{nickname:nickname,phone:phone,rank:rank}).then(function(){
+    toast("棋手添加成功");
+    document.getElementById("p-nickname").value="";
+    document.getElementById("p-phone").value="";
+    document.getElementById("p-rank").value="初段";
+    loadPlayers();
+  }).catch(function(e){toast(e.message,true)});
+});
+
+function delPlayer(id){
+  if(!confirm("确定删除该棋手？关联对局记录也将删除。"))return;
+  api("DELETE","/players/"+id).then(function(){toast("已删除");loadPlayers()}).catch(function(e){toast(e.message,true)});
+}
+
+function loadGames(){
+  api("GET","/games").then(function(list){
+    var tb=document.querySelector("#table-games tbody");
+    if(!list.length){tb.innerHTML=emptyRow(5,"暂无对局记录");return}
+    tb.innerHTML=list.map(function(g){
+      return "<tr><td>"+g.id+"</td><td>"+g.black_nickname+" (黑)</td><td>"+g.red_nickname+" (红)</td><td>"+g.game_date+"</td>"+
+        '<td class="'+resultClass(g.result)+'">'+g.result+"</td></tr>";
+    }).join("");
+  }).catch(function(e){toast(e.message,true)});
+}
+
+document.getElementById("form-game").addEventListener("submit",function(e){
+  e.preventDefault();
+  var black_id=document.getElementById("g-black").value;
+  var red_id=document.getElementById("g-red").value;
+  var game_date=document.getElementById("g-date").value;
+  var result=document.getElementById("g-result").value;
+  if(!black_id||!red_id||!game_date||!result){toast("所有字段不能为空",true);return}
+  api("POST","/games",{black_id:parseInt(black_id),red_id:parseInt(red_id),game_date:game_date,result:result}).then(function(){
+    toast("对局记录成功，积分已更新");
+    document.getElementById("g-black").value="";
+    document.getElementById("g-red").value="";
+    document.getElementById("g-result").value="";
+    loadGames();
+  }).catch(function(e){toast(e.message,true)});
+});
+
+function loadPromote(){
+  api("GET","/players").then(function(list){
+    var container=document.getElementById("promote-list");
+    if(!list.length){container.innerHTML='<div class="empty-state">暂无棋手</div>';return}
+    container.innerHTML=list.map(function(p){
+      var currentIdx=RANKS.indexOf(p.rank);
+      var nextRanks=RANKS.slice(currentIdx+1);
+      var opts=nextRanks.length?nextRanks.map(function(r){return'<option value="'+r+'">'+r+"</option>"}).join(""):'<option value="">已达最高段位</option>';
+      return '<div class="promote-card"><div class="promote-info"><span class="name">'+p.nickname+'</span><span class="current-rank">当前: '+rankBadge(p.rank)+' · 积分: '+p.score+'</span></div>'+
+        '<div class="promote-actions"><select id="promote-'+p.id+'">'+opts+'</select>'+
+        (nextRanks.length?'<button class="btn btn-warn btn-sm" onclick="doPromote('+p.id+')">晋升</button>':'')+
+        "</div></div>";
+    }).join("");
+  }).catch(function(e){toast(e.message,true)});
+}
+
+function doPromote(id){
+  var sel=document.getElementById("promote-"+id);
+  var newRank=sel.value;
+  if(!newRank){toast("请选择目标段位",true);return}
+  api("PUT","/players/"+id+"/promote",{rank:newRank}).then(function(){
+    toast("段位晋升成功");
+    loadPromote();
+  }).catch(function(e){toast(e.message,true)});
+}
+
+function loadLeaderboard(){
+  api("GET","/leaderboard").then(function(list){
+    var tb=document.querySelector("#table-leaderboard tbody");
+    if(!list.length){tb.innerHTML=emptyRow(5,"暂无排行数据");return}
+    tb.innerHTML=list.map(function(p,i){
+      var rankText=i<3?["🥇","🥈","🥉"][i]:""+(i+1);
+      return "<tr><td>"+rankText+"</td><td>"+p.nickname+"</td><td>"+rankBadge(p.rank)+"</td><td>"+p.score+"</td><td>"+p.wins+"</td></tr>";
+    }).join("");
+  }).catch(function(e){toast(e.message,true)});
+}
+
+function loadStats(){
+  var rankOrder={"初段":0,"二段":1,"三段":2,"四段":3,"五段":4};
+  api("GET","/stats/monthly").then(function(list){
+    var grid=document.getElementById("stats-grid");
+    var map={};
+    list.forEach(function(s){map[s.rank]=s.game_count});
+    var colors=["#1890ff","#52c41a","#fa8c16","#f5222d","#722ed1"];
+    grid.innerHTML=RANKS.map(function(r,i){
+      var count=map[r]||0;
+      return '<div class="stat-card"><div class="stat-rank">'+rankBadge(r)+'</div><div class="stat-count" style="color:'+colors[i]+'">'+count+'</div><div class="stat-label">本月对局次数</div></div>';
+    }).join("");
+  }).catch(function(e){toast(e.message,true)});
+}
+
+document.querySelectorAll(".tab").forEach(function(tab){
+  tab.addEventListener("click",function(){
+    document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});
+    document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active")});
+    tab.classList.add("active");
+    var name=tab.getAttribute("data-tab");
+    document.getElementById("panel-"+name).classList.add("active");
+    if(name==="players")loadPlayers();
+    else if(name==="games"){loadGames();loadPlayers()}
+    else if(name==="promote")loadPromote();
+    else if(name==="leaderboard")loadLeaderboard();
+    else if(name==="stats")loadStats();
+  });
+});
+
+(function(){
+  var today=new Date();
+  var yyyy=today.getFullYear();
+  var mm=String(today.getMonth()+1).padStart(2,"0");
+  var dd=String(today.getDate()).padStart(2,"0");
+  document.getElementById("g-date").value=yyyy+"-"+mm+"-"+dd;
+  loadPlayers();
+  loadGames();
+})();
+</script>
+</body>
+</html>
